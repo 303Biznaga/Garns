@@ -26,6 +26,6 @@ Sudoku progresivo con autoguardado, sonidos a 432 Hz y PWA para jugar sin conexi
 
 ## 📦 Instalación local
 ```bash
-git clone https://github.com/tuusuario/garns.git
+git clone https://github.com/biznaga303/garns.git
 cd garns
 # Usa Live Server o cualquier servidor HTTP (por ejemplo, npx server)
