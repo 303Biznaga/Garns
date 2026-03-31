@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GARNS · Sudoku 432 Hz</title>
+    
+    <!-- PWA manifest y metatags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GARNS">
+    <meta name="theme-color" content="#b89840">
+
+    <style>
+        /* ============================================
+           ESTILOS MINIMALISTAS (único tema)
+           ============================================ */
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;600&family=Quicksand:wght@400;600&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0a;
+            color: #e0e0e0;
+            font-family: 'Quicksand', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+        }
+
+        /* Pantallas */
+        .screen {
+            display: none;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .screen.active {
+            display: block;
+        }
+
+        /* Menú principal */
+        h1 {
+            font-family: 'Cinzel Decorative', serif;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            color: #b89840;
+        }
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 30px 0;
+        }
+        .menu-buttons button,
+        #themeSelector,
+        #continueBtn,
+        #statsBtn,
+        #resetStatsBtn,
+        #muteBtn {
+            padding: 15px;
+            font-size: 1.2rem;
+            border: 2px solid #b89840;
+            border-radius: 50px;
+            background-color: #1a1a1a;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            font-family: 'Cinzel', serif;
+        }
+        .menu-buttons button:hover,
+        #themeSelector:hover,
+        #continueBtn:hover,
+        #statsBtn:hover,
+        #resetStatsBtn:hover,
+        #muteBtn:hover {
+            background-color: #b89840;
+            color: black;
+            transform: scale(1.02);
+        }
+
+        /* HUD */
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            margin-bottom: 15px;
+            color: #b89840;
+            flex-wrap: wrap;
+        }
+        .hud div {
+            font-size: 1rem;
+        }
+        .hud-mute {
+            background: none;
+            border: none;
+            color: #b89840;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        /* Tablero */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 2px;
+            aspect-ratio: 1/1;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            background-color: #b89840;
+            padding: 2px;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(184,152,64,0.3);
+        }
+        .cell {
+            background-color: #2b2b2b;
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 600;
+            aspect-ratio: 1/1;
+            cursor: pointer;
+            border: 1px solid #333;
+        }
+        .cell.fixed {
+            background-color: #4a4a4a;
+            font-weight: 700;
+        }
+        .cell.selected {
+            background-color: #5a5a5a;
+            outline: 3px solid #b89840;
+        }
+        .cell-notes {
+            font-size: 0.6rem;
+            color: #888;
+        }
+
+        /* Teclado numérico */
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            margin: 20px 0;
+        }
+        .num-btn {
+            aspect-ratio: 1/1;
+            font-size: 1.5rem;
+            border: 2px solid #b89840;
+            border-radius: 12px;
+            background: #1a1a1a;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .num-btn:hover {
+            background: #b89840;
+            color: black;
+            transform: scale(1.05);
+        }
+        .num-btn.clear-btn {
+            background-color: #8b0000;
+            color: white;
+        }
+        .num-btn.note-btn.active {
+            background-color: #b89840;
+            color: black;
+        }
+
+        /* Modales y créditos */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .modal.hidden {
+            display: none;
+        }
+        .modal-content {
+            background: #2b2b2b;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 500px;
+            text-align: center;
+            border: 3px solid #b89840;
+        }
+        .modal-content button {
+            margin-top: 20px;
+            padding: 10px 30px;
+            border: none;
+            background: #b89840;
+            color: black;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .credits-screen {
+            position: fixed;
+            inset: 0;
+            background: black;
+            z-index: 3000;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .credits-screen.hidden {
+            display: none;
+        }
+        .credits-scroll {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-size: 1.5rem;
+            animation: scroll 60s linear forwards;
+        }
+        @keyframes scroll {
+            0% { top: 100%; }
+            100% { top: -200%; }
+        }
+        .credits-image img {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            margin: 20px;
+        }
+        .credits-final {
+            font-size: 3rem;
+            color: gold;
+            margin: 40px 0;
+        }
+
+        /* Mensaje de combo */
+        .combo-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            color: gold;
+            font-size: 2rem;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid gold;
+            z-index: 2500;
+            animation: fadeOut 2s forwards;
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        /* Responsive */
+        @media (max-width: 500px) {
+            h1 { font-size: 2rem; }
+            .numpad { grid-template-columns: repeat(3, 1fr); }
+            .num-btn { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- MENÚ PRINCIPAL -->
+<div id="main-menu" class="screen active">
+    <h1>✦ GARNS ✦</h1>
+    <div class="menu-buttons">
+        <button onclick="garnsStartGame('easy'); sonidos.menuClick();">🌱 Fácil</button>
+        <button onclick="garnsStartGame('medium'); sonidos.menuClick();">🌿 Medio</button>
+        <button onclick="garnsStartGame('hard'); sonidos.menuClick();">🌳 Difícil</button>
+        <button onclick="garnsStartGame('expert'); sonidos.menuClick();">🌟 Experto</button>
+    </div>
+    <div style="margin:20px 0;">
+        <button id="continueBtn" onclick="garnsContinueGame(); sonidos.menuClick();">⏵ Continuar partida</button>
+        <button id="statsBtn" onclick="garnsShowStats(); sonidos.menuClick();">📊 Estadísticas</button>
+        <button id="resetStatsBtn" onclick="garnsResetStats(); sonidos.menuClick();">🗑️ Borrar estadísticas</button>
+        <button id="muteBtn" onclick="toggleMute(); sonidos.menuClick();">🔊 Silenciar</button>
+    </div>
+    <div style="margin-top:30px; color:#666;">por Neto · para Natalia</div>
+</div>
+
+<!-- PANTALLA DE JUEGO -->
+<div id="game-screen" class="screen">
+    <div class="hud">
+        <div>🎯 <span id="score">0</span></div>
+        <div>🔥 <span id="combo">0</span></div>
+        <div>⏱️ <span id="timer">00:00</span></div>
+        <div>📊 <span id="current-difficulty">Fácil</span></div>
+        <button class="hud-mute" onclick="toggleMute()" id="hudMuteBtn">🔊</button>
+    </div>
+
+    <div id="sudoku-board" class="board"></div>
+
+    <div class="numpad">
+        <button class="num-btn" data-num="1">1</button>
+        <button class="num-btn" data-num="2">2</button>
+        <button class="num-btn" data-num="3">3</button>
+        <button class="num-btn" data-num="4">4</button>
+        <button class="num-btn" data-num="5">5</button>
+        <button class="num-btn" data-num="6">6</button>
+        <button class="num-btn" data-num="7">7</button>
+        <button class="num-btn" data-num="8">8</button>
+        <button class="num-btn" data-num="9">9</button>
+        <button class="num-btn clear-btn" data-action="clear">⌫</button>
+        <button class="num-btn note-btn" data-action="note" id="noteToggle">📝</button>
+        <button class="num-btn hint-btn" data-action="hint">💡</button>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+        <button onclick="garnsPauseGame()">⏸️ Pausa</button>
+        <button onclick="garnsGoToMenu()">🏠 Menú</button>
+    </div>
+</div>
+
+<!-- MODAL DE HOWARD GARNS -->
+<div id="howard-modal" class="modal hidden">
+    <div class="modal-content">
+        <div class="credits-image">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23333' stroke='%23b89840' stroke-width='2'/%3E%3Ctext x='50' y='65' font-size='40' text-anchor='middle' fill='%23b89840' font-family='Cinzel'%3EHG%3C/text%3E%3C/svg%3E" alt="Howard Garns">
+        </div>
+        <p id="howard-message" style="font-size:1.2rem; line-height:1.5;"></p>
+        <button onclick="garnsCloseHowardModal()">Continuar</button>
+    </div>
+</div>
+
+<!-- PANTALLA DE CRÉDITOS -->
+<div id="credits-screen" class="credits-screen hidden">
+    <div class="credits-scroll">
+        <h2>✨ Gracias por jugar ✨</h2>
+        <div class="credits-image">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23333' stroke='%23b89840' stroke-width='2'/%3E%3Ctext x='50' y='65' font-size='40' text-anchor='middle' fill='%23b89840' font-family='Cinzel'%3EHG%3C/text%3E%3C/svg%3E" alt="Howard Garns">
+            <p>Howard Garns<br><small>1905–1989</small></p>
+        </div>
+        <div style="max-width:600px; margin:0 auto; line-height:2;">
+            <p>“En 1979, desde su mesa de dibujo en Indianápolis,<br>
+            un arquitecto llamado Howard Garns creó el primer Sudoku.<br>
+            Lo llamó ‘Number Place’. Nunca buscó fama;<br>
+            solo quería regalar un pasatiempo elegante al mundo.”</p>
+            <p>‎</p>
+            <p>Este juego fue creado con ❤️ por<br>
+            <strong>Neto</strong> para su hija <strong>Natalia</strong><br>
+            y para todos los amantes de los números.</p>
+            <p>‎</p>
+            <p>“Si pierdes el tren en el que voy,<br>
+            sabrás que me he ido;<br>
+            oirás el silbido a cien millas.<br>
+            Pero en cada número que colocas,<br>
+            yo sigo aquí contigo.”</p>
+            <p>‎</p>
+            <p class="credits-final">Inolvidable.</p>
+        </div>
+        <div style="margin: 50px 0;">
+            <button onclick="garnsRestartFromCredits()">↺ Jugar de nuevo</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================
+// MOTOR DE AUDIO - 432 Hz con diseño profesional
+// ============================================
+const AUDIO = {
+    ctx: null,
+    masterGain: null,
+    muted: false,
+    volume: 0.7,
+    A4: 432,
+    atmosferaActiva: null,
+    intervalosAtmosfera: []
+};
+
+function initAudio() {
+    if (AUDIO.ctx) return;
+    try {
+        AUDIO.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        AUDIO.masterGain = AUDIO.ctx.createGain();
+        AUDIO.masterGain.gain.value = AUDIO.muted ? 0 : AUDIO.volume;
+        AUDIO.masterGain.connect(AUDIO.ctx.destination);
+    } catch (e) {
+        console.warn('Web Audio no soportada');
+    }
+}
+
+function notaAFrecuencia(nota) {
+    const notas = { 'C':0, 'C#':1, 'Db':1, 'D':2, 'D#':3, 'Eb':3, 'E':4, 'F':5, 'F#':6, 'Gb':6, 'G':7, 'G#':8, 'Ab':8, 'A':9, 'A#':10, 'Bb':10, 'B':11 };
+    const regex = /^([A-G]#?b?)(\d)$/;
+    const match = nota.match(regex);
+    if (!match) return 440;
+    const nombre = match[1];
+    const octava = parseInt(match[2]);
+    const semitonos = (notas[nombre] || 0) + (octava - 4) * 12;
+    return AUDIO.A4 * Math.pow(2, semitonos / 12);
+}
+
+function tocar(params) {
+    if (!AUDIO.ctx || AUDIO.muted) return;
+    if (AUDIO.ctx.state === 'suspended') AUDIO.ctx.resume();
+
+    const ahora = AUDIO.ctx.currentTime;
+    const {
+        frecuencia = 440,
+        forma = 'sine',
+        volumen = 0.2,
+        duracion = 0.2,
+        ataque = 0.01,
+        decaimiento = 0.05,
+        sustain = 0.7,
+        release = 0.05,
+        filtro = null
+    } = params;
+
+    const osc = AUDIO.ctx.createOscillator();
+    osc.type = forma;
+    osc.frequency.value = frecuencia;
+
+    const gain = AUDIO.ctx.createGain();
+    gain.gain.value = 0;
+
+    // Envolvente ADSR
+    gain.gain.setValueAtTime(0, ahora);
+    gain.gain.linearRampToValueAtTime(1, ahora + ataque);
+    gain.gain.linearRampToValueAtTime(sustain, ahora + ataque + decaimiento);
+    gain.gain.setValueAtTime(sustain, ahora + duracion - release);
+    gain.gain.linearRampToValueAtTime(0, ahora + duracion);
+
+    osc.connect(gain);
+    let ultimoNodo = gain;
+    if (filtro) {
+        const f = AUDIO.ctx.createBiquadFilter();
+        f.type = 'lowpass';
+        f.frequency.value = filtro.frecuencia || 2000;
+        f.Q.value = filtro.Q || 1;
+        gain.connect(f);
+        ultimoNodo = f;
+    }
+    ultimoNodo.connect(AUDIO.masterGain);
+
+    osc.start(ahora);
+    osc.stop(ahora + duracion);
+}
+
+// ============================================
+// SONIDOS PROFESIONALES (diseñados para Garns)
+// ============================================
+const sonidos = {
+    menuClick: () => tocar({ frecuencia: notaAFrecuencia('E5'), forma: 'sine', volumen:0.1, duracion:0.04, ataque:0.002, decaimiento:0.01, sustain:0, release:0.02 }),
+    menuChange: () => tocar({ frecuencia: notaAFrecuencia('C5'), forma: 'triangle', duracion:0.05, volumen:0.08 }),
+    correcto: () => tocar({ frecuencia: notaAFrecuencia('C5'), forma: 'sine', volumen:0.15, duracion:0.08, ataque:0.002, decaimiento:0.01, sustain:0, release:0.02 }),
+    error: () => tocar({ frecuencia: notaAFrecuencia('A3'), forma: 'sawtooth', volumen:0.12, duracion:0.12, ataque:0.01, decaimiento:0.03, sustain:0.3, release:0.04, filtro: { frecuencia:600, Q:2 } }),
+    borrar: () => tocar({ frecuencia: notaAFrecuencia('G4'), forma: 'triangle', duracion:0.05, volumen:0.1 }),
+    combo: (nivel) => {
+        const base = notaAFrecuencia('C5');
+        for (let i = 0; i < 3; i++) {
+            setTimeout(() => tocar({ frecuencia: base * (1 + i * 0.2), forma: 'sine', duracion:0.05, volumen:0.08 + i*0.03 }), i * 60);
+        }
+    },
+    filaCompleta: () => {
+        [notaAFrecuencia('C5'), notaAFrecuencia('E5'), notaAFrecuencia('G5')].forEach((f,i) => {
+            setTimeout(() => tocar({ frecuencia: f, forma: 'triangle', duracion:0.12, volumen:0.12 }), i*100);
+        });
+    },
+    nivelCompleto: () => {
+        [notaAFrecuencia('C5'), notaAFrecuencia('E5'), notaAFrecuencia('G5'), notaAFrecuencia('C6')].forEach((f,i) => {
+            setTimeout(() => tocar({ frecuencia: f, forma: 'sine', duracion:0.15, volumen:0.15 }), i*120);
+        });
+    },
+    inicio: () => tocar({ frecuencia: notaAFrecuencia('A5'), forma: 'sine', duracion:0.1, volumen:0.15 }),
+};
+
+// Atmósfera de fondo sutil (activada por defecto)
+function iniciarAtmosfera() {
+    if (AUDIO.atmosferaActiva) return;
+    const tocarDrone = () => {
+        if (AUDIO.muted) return;
+        tocar({ frecuencia: 86, forma: 'sine', duracion: 8, volumen: 0.03, ataque: 2, decaimiento: 2, sustain: 0.5, release: 2 });
+    };
+    tocarDrone();
+    AUDIO.intervalosAtmosfera.push(setInterval(tocarDrone, 10000));
+    
+    const tocarNota = () => {
+        if (AUDIO.muted) return;
+        if (Math.random() > 0.7) {
+            tocar({ frecuencia: 220 + Math.random()*50, forma: 'sine', duracion: 1, volumen: 0.02, ataque: 0.5, decaimiento: 0.5, sustain: 0.3, release: 0.5 });
+        }
+    };
+    AUDIO.intervalosAtmosfera.push(setInterval(tocarNota, 15000));
+    AUDIO.atmosferaActiva = true;
+}
+
+function detenerAtmosfera() {
+    AUDIO.intervalosAtmosfera.forEach(clearInterval);
+    AUDIO.intervalosAtmosfera = [];
+    AUDIO.atmosferaActiva = false;
+}
+
+function toggleMute() {
+    AUDIO.muted = !AUDIO.muted;
+    if (AUDIO.masterGain) AUDIO.masterGain.gain.value = AUDIO.muted ? 0 : AUDIO.volume;
+    const btns = [document.getElementById('muteBtn'), document.getElementById('hudMuteBtn')];
+    btns.forEach(btn => { if (btn) btn.textContent = AUDIO.muted ? '🔇' : '🔊'; });
+    sonidos.menuClick();
+    if (!AUDIO.muted && !AUDIO.atmosferaActiva) iniciarAtmosfera();
+    if (AUDIO.muted && AUDIO.atmosferaActiva) detenerAtmosfera();
+}
+
+// ============================================
+// LÓGICA DEL SUDOKU (con autoguardado)
+// ============================================
+let garnsCurrentDifficulty = 'easy';
+const garnsDIFFICULTIES = ['easy', 'medium', 'hard', 'expert'];
+const garnsDIFFICULTY_NAMES = { easy:'Fácil', medium:'Medio', hard:'Difícil', expert:'Experto' };
+const garnsCELLS_TO_REMOVE = { easy:36, medium:45, hard:54, expert:60 };
+
+let garnsBoard = [];
+let garnsSolution = [];
+let garnsSelectedRow = -1, garnsSelectedCol = -1;
+let garnsNotesMode = false;
+let garnsHintsUsed = 0;
+let garnsScore = 0;
+let garnsCombo = 0;
+let garnsLastPlacementTime = Date.now();
+let garnsTimerInterval = null;
+let garnsElapsedSeconds = 0;
+let garnsStats = {
+    gamesPlayed:0, gamesWon:0,
+    bestTimes:{ easy:Infinity, medium:Infinity, hard:Infinity, expert:Infinity }
+};
+
+function garnsLoadStats() {
+    const saved = localStorage.getItem('garns_stats');
+    if (saved) try { garnsStats = JSON.parse(saved); } catch(e){}
+}
+function garnsSaveStats() { localStorage.setItem('garns_stats', JSON.stringify(garnsStats)); }
+garnsLoadStats();
+
+function garnsSaveGame() {
+    const estado = {
+        board: garnsBoard.map(fila => fila.map(celda => ({
+            value: celda.value,
+            fixed: celda.fixed,
+            notes: celda.notes ? Array.from(celda.notes) : []
+        }))),
+        solution: garnsSolution.map(fila => fila.map(c => ({ value: c.value, fixed: c.fixed }))),
+        currentDifficulty: garnsCurrentDifficulty,
+        score: garnsScore,
+        combo: garnsCombo,
+        elapsedSeconds: garnsElapsedSeconds,
+        lastPlacementTime: garnsLastPlacementTime
+    };
+    localStorage.setItem('garns_partida', JSON.stringify(estado));
+}
+
+function garnsLoadGame() {
+    const saved = localStorage.getItem('garns_partida');
+    if (!saved) return false;
+    try {
+        const estado = JSON.parse(saved);
+        garnsCurrentDifficulty = estado.currentDifficulty;
+        garnsScore = estado.score;
+        garnsCombo = estado.combo;
+        garnsElapsedSeconds = estado.elapsedSeconds;
+        garnsLastPlacementTime = estado.lastPlacementTime;
+        garnsBoard = estado.board.map(fila => fila.map(c => ({
+            value: c.value,
+            fixed: c.fixed,
+            notes: new Set(c.notes || [])
+        })));
+        garnsSolution = estado.solution.map(fila => fila.map(c => ({ value:c.value, fixed:c.fixed })));
+        garnsSelectedRow = garnsSelectedCol = -1;
+        return true;
+    } catch(e) { return false; }
+}
+
+function garnsShuffleArray(arr) {
+    for (let i=arr.length-1; i>0; i--) {
+        const j = Math.floor(Math.random()*(i+1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+}
+
+function garnsIsValidPlacement(board, r, c, num) {
+    for (let i=0; i<9; i++) if (board[r][i] === num || board[i][c] === num) return false;
+    const sr = Math.floor(r/3)*3, sc = Math.floor(c/3)*3;
+    for (let i=0; i<3; i++) for (let j=0; j<3; j++) if (board[sr+i][sc+j] === num) return false;
+    return true;
+}
+
+function garnsFillBoard(board) {
+    const nums = [1,2,3,4,5,6,7,8,9];
+    for (let r=0; r<9; r++) {
+        for (let c=0; c<9; c++) {
+            if (board[r][c] === 0) {
+                garnsShuffleArray(nums);
+                for (let n of nums) {
+                    if (garnsIsValidPlacement(board, r, c, n)) {
+                        board[r][c] = n;
+                        if (garnsFillBoard(board)) return true;
+                        board[r][c] = 0;
+                    }
+                }
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+function garnsGenerateSolvedBoard() {
+    const b = Array(9).fill().map(()=>Array(9).fill(0));
+    garnsFillBoard(b);
+    return b;
+}
+
+function garnsCreatePuzzle() {
+    const sol = garnsGenerateSolvedBoard();
+    garnsSolution = sol.map(r => r.map(v => ({ value:v, fixed:true })));
+    garnsBoard = sol.map(r => r.map(v => ({ value:v, fixed:true, notes:new Set() })));
+    const cellsToRemove = garnsCELLS_TO_REMOVE[garnsCurrentDifficulty];
+    const pos = [];
+    for (let r=0; r<9; r++) for (let c=0; c<9; c++) pos.push([r,c]);
+    garnsShuffleArray(pos);
+    for (let i=0; i<cellsToRemove; i++) {
+        const [r,c] = pos[i];
+        garnsBoard[r][c].value = null;
+        garnsBoard[r][c].fixed = false;
+    }
+}
+
+function garnsIsValidMove(r,c,num) {
+    if (num===null) return true;
+    for (let i=0; i<9; i++) {
+        if (i!==c && garnsBoard[r][i].value === num) return false;
+        if (i!==r && garnsBoard[i][c].value === num) return false;
+    }
+    const sr=Math.floor(r/3)*3, sc=Math.floor(c/3)*3;
+    for (let i=0; i<3; i++) for (let j=0; j<3; j++)
+        if ((sr+i!==r || sc+j!==c) && garnsBoard[sr+i][sc+j].value === num) return false;
+    return true;
+}
+
+function garnsIsBoardComplete() {
+    for (let r=0; r<9; r++) for (let c=0; c<9; c++)
+        if (garnsBoard[r][c].value !== garnsSolution[r][c].value) return false;
+    return true;
+}
+
+function garnsUpdateHUD() {
+    document.getElementById('score').textContent = garnsScore;
+    document.getElementById('combo').textContent = garnsCombo;
+}
+
+function garnsAddPoints() {
+    const now = Date.now();
+    const diff = now - garnsLastPlacementTime;
+    let timeBonus = diff < 2000 ? 5 : diff < 4000 ? 3 : 1;
+    const mult = 1 + garnsCombo * 0.15;
+    const total = Math.round((10 + timeBonus) * mult);
+    garnsScore += total;
+    garnsCombo++;
+    garnsLastPlacementTime = now;
+    garnsUpdateHUD();
+    sonidos.correcto();
+    if ([5,10,15,20,25,30].includes(garnsCombo)) garnsShowComboMilestone(garnsCombo);
+    garnsSaveGame();
+}
+function garnsOnError() { garnsCombo = 0; garnsUpdateHUD(); sonidos.error(); garnsSaveGame(); }
+
+function garnsShowComboMilestone(combo) {
+    const msg = {
+        5:'¡Combo 5! Sigue así 🌟',
+        10:'¡Combo 10! Imparable 💪',
+        15:'¡Combo 15! Leyenda 🏆',
+        20:'¡Combo 20! Maestro 👑',
+        25:'¡Combo 25! Mente prodigiosa 🧠',
+        30:'¡Combo 30! Dios del Sudoku ⚡'
+    }[combo];
+    if (!msg) return;
+    const el = document.createElement('div');
+    el.className = 'combo-message';
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2000);
+    sonidos.combo(combo);
+}
+
+function garnsRenderBoard() {
+    const boardEl = document.getElementById('sudoku-board');
+    if (!boardEl) return;
+    boardEl.innerHTML = '';
+    for (let r=0; r<9; r++) {
+        for (let c=0; c<9; c++) {
+            const cell = garnsBoard[r][c];
+            const cellDiv = document.createElement('div');
+            cellDiv.className = 'cell';
+            cellDiv.dataset.row = r;
+            cellDiv.dataset.col = c;
+            if (cell.fixed) cellDiv.classList.add('fixed');
+            if (garnsSelectedRow === r && garnsSelectedCol === c) cellDiv.classList.add('selected');
+            const valueSpan = document.createElement('span');
+            valueSpan.textContent = cell.value || '';
+            const notesDiv = document.createElement('div');
+            notesDiv.className = 'cell-notes';
+            if (cell.notes && cell.notes.size > 0) {
+                notesDiv.textContent = Array.from(cell.notes).sort().join(' ');
+            }
+            cellDiv.appendChild(valueSpan);
+            cellDiv.appendChild(notesDiv);
+            cellDiv.addEventListener('click', () => garnsSelectCell(r,c));
+            boardEl.appendChild(cellDiv);
+        }
+    }
+}
+
+function garnsSelectCell(r,c) {
+    document.querySelectorAll('.cell').forEach(el => el.classList.remove('selected'));
+    garnsSelectedRow = r; garnsSelectedCol = c;
+    const sel = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+    if (sel) sel.classList.add('selected');
+}
+
+function garnsHandleNumber(num) {
+    if (garnsSelectedRow === -1) return;
+    const cell = garnsBoard[garnsSelectedRow][garnsSelectedCol];
+    if (cell.fixed) { garnsOnError(); return; }
+    if (garnsNotesMode) {
+        if (!cell.notes) cell.notes = new Set();
+        if (cell.notes.has(num)) cell.notes.delete(num);
+        else cell.notes.add(num);
+        garnsRenderBoard();
+        garnsSaveGame();
+        return;
+    }
+    const isValid = garnsIsValidMove(garnsSelectedRow, garnsSelectedCol, num);
+    if (cell.value === num) {
+        cell.value = null;
+        garnsOnError();
+    } else {
+        cell.value = num;
+        if (isValid) garnsAddPoints();
+        else garnsOnError();
+    }
+    garnsRenderBoard();
+    if (garnsIsBoardComplete()) garnsOnGameComplete();
+}
+
+function garnsHandleClear() {
+    if (garnsSelectedRow === -1) return;
+    const cell = garnsBoard[garnsSelectedRow][garnsSelectedCol];
+    if (cell.fixed) return;
+    cell.value = null;
+    cell.notes?.clear();
+    garnsOnError();
+    garnsRenderBoard();
+    garnsSaveGame();
+    sonidos.borrar();
+}
+
+function garnsHandleHint() {
+    if (garnsSelectedRow === -1) return;
+    const cell = garnsBoard[garnsSelectedRow][garnsSelectedCol];
+    if (!cell.value && !cell.fixed) {
+        cell.value = garnsSolution[garnsSelectedRow][garnsSelectedCol].value;
+        garnsHintsUsed++;
+        garnsRenderBoard();
+        if (garnsIsBoardComplete()) garnsOnGameComplete();
+        garnsSaveGame();
+    }
+}
+
+function garnsStartTimer() {
+    if (garnsTimerInterval) clearInterval(garnsTimerInterval);
+    garnsTimerInterval = setInterval(() => {
+        garnsElapsedSeconds++;
+        const mins = Math.floor(garnsElapsedSeconds/60);
+        const secs = garnsElapsedSeconds%60;
+        document.getElementById('timer').textContent = `${mins}:${secs.toString().padStart(2,'0')}`;
+    }, 1000);
+}
+function garnsPauseTimer() { clearInterval(garnsTimerInterval); }
+function garnsResetTimer() { clearInterval(garnsTimerInterval); garnsElapsedSeconds = 0; document.getElementById('timer').textContent = '00:00'; }
+
+function garnsStartGame(difficulty) {
+    initAudio();
+    localStorage.removeItem('garns_partida');
+    garnsCurrentDifficulty = difficulty;
+    garnsSelectedRow = garnsSelectedCol = -1;
+    garnsNotesMode = false;
+    document.getElementById('noteToggle')?.classList.remove('active');
+    document.getElementById('current-difficulty').textContent = garnsDIFFICULTY_NAMES[difficulty];
+    garnsCreatePuzzle();
+    garnsRenderBoard();
+    garnsScore = 0; garnsCombo = 0; garnsLastPlacementTime = Date.now();
+    garnsUpdateHUD();
+    garnsResetTimer();
+    garnsStartTimer();
+    document.getElementById('main-menu').classList.remove('active');
+    document.getElementById('game-screen').classList.add('active');
+    sonidos.inicio();
+    iniciarAtmosfera();
+}
+
+function garnsContinueGame() {
+    if (!garnsLoadGame()) { alert('No hay partida guardada'); return; }
+    initAudio();
+    document.getElementById('current-difficulty').textContent = garnsDIFFICULTY_NAMES[garnsCurrentDifficulty];
+    garnsRenderBoard();
+    garnsUpdateHUD();
+    garnsResetTimer();
+    garnsElapsedSeconds = garnsElapsedSeconds;
+    garnsStartTimer();
+    document.getElementById('main-menu').classList.remove('active');
+    document.getElementById('game-screen').classList.add('active');
+    sonidos.inicio();
+    iniciarAtmosfera();
+}
+
+function garnsGoToMenu() {
+    garnsPauseTimer();
+    detenerAtmosfera();
+    document.getElementById('game-screen').classList.remove('active');
+    document.getElementById('main-menu').classList.add('active');
+}
+
+function garnsOnGameComplete() {
+    garnsPauseTimer();
+    garnsStats.gamesPlayed++;
+    garnsStats.gamesWon++;
+    if (garnsElapsedSeconds < garnsStats.bestTimes[garnsCurrentDifficulty]) {
+        garnsStats.bestTimes[garnsCurrentDifficulty] = garnsElapsedSeconds;
+    }
+    garnsSaveStats();
+    localStorage.removeItem('garns_partida');
+
+    const idx = garnsDIFFICULTIES.indexOf(garnsCurrentDifficulty);
+    if (idx >= 0 && idx < garnsDIFFICULTIES.length-1) {
+        setTimeout(() => garnsStartGame(garnsDIFFICULTIES[idx+1]), 1500);
+        sonidos.nivelCompleto();
+    } else {
+        garnsShowHowardModal();
+    }
+}
+
+function garnsShowHowardModal() {
+    garnsPauseTimer();
+    const messages = [
+        "Arquitecto de profesión, creador de números por pasión. En 1979, en Indianápolis, dibujé el primer 'Number Place'. Nunca imaginé que llegaría tan lejos. Gracias por completar el viaje.",
+        "Cuando diseñé este pasatiempo en mi mesa de dibujo, solo quería ofrecer un juego elegante. Tú has demostrado que la lógica nunca pasa de moda. Sigue jugando."
+    ];
+    document.getElementById('howard-message').textContent = messages[Math.floor(Math.random()*messages.length)];
+    document.getElementById('howard-modal').classList.remove('hidden');
+    play500Miles();
+}
+
+function garnsCloseHowardModal() {
+    document.getElementById('howard-modal').classList.add('hidden');
+    garnsStartCredits();
+}
+
+function garnsStartCredits() {
+    document.getElementById('game-screen').classList.remove('active');
+    document.getElementById('credits-screen').classList.remove('hidden');
+    play500Miles();
+}
+
+function garnsRestartFromCredits() {
+    document.getElementById('credits-screen').classList.add('hidden');
+    document.getElementById('main-menu').classList.add('active');
+    iniciarAtmosfera();
+}
+
+function garnsPauseGame() { garnsPauseTimer(); alert('Juego en pausa'); garnsStartTimer(); }
+
+function garnsShowStats() {
+    alert(`Partidas: ${garnsStats.gamesPlayed}\nVictorias: ${garnsStats.gamesWon}\nMejores tiempos:\n- Fácil: ${garnsStats.bestTimes.easy===Infinity?'--':garnsStats.bestTimes.easy}s\n- Medio: ${garnsStats.bestTimes.medium===Infinity?'--':garnsStats.bestTimes.medium}s\n- Difícil: ${garnsStats.bestTimes.hard===Infinity?'--':garnsStats.bestTimes.hard}s\n- Experto: ${garnsStats.bestTimes.expert===Infinity?'--':garnsStats.bestTimes.expert}s`);
+}
+function garnsResetStats() { if(confirm('¿Borrar todas las estadísticas?')) { garnsStats = { gamesPlayed:0, gamesWon:0, bestTimes:{ easy:Infinity, medium:Infinity, hard:Infinity, expert:Infinity } }; garnsSaveStats(); } }
+
+function play500Miles() {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    const melody = [
+        { note:523.25, dur:0.3 }, { note:587.33, dur:0.3 }, { note:659.25, dur:0.3 },
+        { note:698.46, dur:0.3 }, { note:784.00, dur:0.5 }, { pause:0.2 },
+        { note:523.25, dur:0.3 }, { note:587.33, dur:0.3 }, { note:659.25, dur:0.3 },
+        { note:698.46, dur:0.3 }, { note:784.00, dur:0.8 }, { pause:0.3 },
+        { note:880.00, dur:0.4 }, { note:987.77, dur:0.4 }, { note:1046.50, dur:0.6 },
+        { pause:0.5 }, { note:784.00, dur:0.4 }, { note:784.00, dur:0.4 },
+        { note:880.00, dur:0.5 }, { note:987.77, dur:0.8 }
+    ];
+    let time = ctx.currentTime;
+    melody.forEach(seg => {
+        if (seg.pause) { time += seg.pause; return; }
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = seg.note;
+        gain.gain.setValueAtTime(0.1, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + seg.dur);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(time);
+        osc.stop(time + seg.dur);
+        time += seg.dur;
+    });
+}
+
+// ============================================
+// INICIALIZACIÓN
+// ============================================
+document.addEventListener('DOMContentLoaded', () => {
+    initAudio();
+
+    if (!localStorage.getItem('garns_partida')) {
+        document.getElementById('continueBtn').style.display = 'none';
+    }
+
+    document.querySelectorAll('.num-btn[data-num]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            garnsHandleNumber(parseInt(e.target.dataset.num));
+            sonidos.menuClick();
+        });
+    });
+    document.querySelector('[data-action="clear"]').addEventListener('click', () => {
+        garnsHandleClear();
+        sonidos.menuClick();
+    });
+    document.querySelector('[data-action="note"]').addEventListener('click', (e) => {
+        garnsNotesMode = !garnsNotesMode;
+        e.target.classList.toggle('active', garnsNotesMode);
+        sonidos.menuClick();
+    });
+    document.querySelector('[data-action="hint"]').addEventListener('click', () => {
+        garnsHandleHint();
+        sonidos.menuClick();
+    });
+
+    window.addEventListener('keydown', (e) => {
+        if (!document.getElementById('game-screen').classList.contains('active')) return;
+        if (e.key >= '1' && e.key <= '9') garnsHandleNumber(parseInt(e.key));
+        if (e.key === 'Backspace' || e.key === 'Delete') garnsHandleClear();
+        if (e.key === 'n' || e.key === 'N') {
+            garnsNotesMode = !garnsNotesMode;
+            document.getElementById('noteToggle').classList.toggle('active', garnsNotesMode);
+        }
+        if (e.key === 'h' || e.key === 'H') garnsHandleHint();
+        if (e.key.startsWith('Arrow')) e.preventDefault();
+    });
+
+    iniciarAtmosfera();
+});
+
+// ============================================
+// GENERACIÓN DE ICONOS PARA PWA (una sola vez)
+// ============================================
+(function generarIconos() {
+    function dibujarIcono(tam) {
+        const canvas = document.createElement('canvas');
+        canvas.width = tam; canvas.height = tam;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#0a0a0a';
+        ctx.fillRect(0,0,tam,tam);
+        ctx.strokeStyle = '#b89840';
+        ctx.lineWidth = Math.max(2, tam/64);
+        ctx.beginPath(); ctx.arc(tam/2, tam/2, tam*0.4, 0, Math.PI*2); ctx.stroke();
+        ctx.font = `bold ${tam*0.5}px 'Cinzel Decorative', 'Cinzel', serif`;
+        ctx.fillStyle = '#b89840';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('G', tam/2, tam/2);
+        ctx.strokeStyle = '#5aaa72';
+        ctx.lineWidth = Math.max(1, tam/128);
+        ctx.beginPath(); ctx.moveTo(tam*0.3, tam*0.3); ctx.lineTo(tam*0.7, tam*0.7); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(tam*0.7, tam*0.3); ctx.lineTo(tam*0.3, tam*0.7); ctx.stroke();
+        return canvas;
+    }
+    if (!localStorage.getItem('iconos_generados')) {
+        setTimeout(() => {
+            const canvas192 = dibujarIcono(192);
+            const a192 = document.createElement('a');
+            a192.download = 'icon-192.png';
+            a192.href = canvas192.toDataURL('image/png');
+            a192.click();
+            setTimeout(() => {
+                const canvas512 = dibujarIcono(512);
+                const a512 = document.createElement('a');
+                a512.download = 'icon-512.png';
+                a512.href = canvas512.toDataURL('image/png');
+                a512.click();
+                localStorage.setItem('iconos_generados', 'true');
+            }, 500);
+        }, 1000);
+    }
+})();
+</script>
+
+<!-- SERVICE WORKER REGISTRATION -->
+<script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+            .then(reg => console.log('✅ Service Worker registrado'))
+            .catch(err => console.log('❌ Error en Service Worker', err));
+    });
+}
+</script>
+</body>
+</html>
